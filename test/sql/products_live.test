@@ -1,0 +1,31 @@
+# name: test/sql/products_live.test
+# description: wisdomtree.products LIVE catalog invariants (hit WisdomTree) — gated on WT_LIVE.
+# group: [sql]
+
+require-env VGI_TEST_WORKER
+
+require-env WT_LIVE
+
+statement ok
+ATTACH 'wisdomtree' AS wt (TYPE vgi, LOCATION '${VGI_TEST_WORKER}');
+
+statement ok
+SET search_path='wt.main';
+
+# The catalog has many funds; filter with WHERE.
+query I
+SELECT (count(*) > 50)::INT FROM wt.products;
+----
+1
+
+# DGRW (U.S. Quality Dividend Growth Fund) is present with a non-empty fund name — via a WHERE.
+query I
+SELECT (count(*) = 1)::INT FROM wt.products WHERE ticker = 'DGRW' AND fund_name IS NOT NULL;
+----
+1
+
+# Asset class is populated for the lineup (from the products page category tiers).
+query I
+SELECT (count(DISTINCT asset_class) >= 1)::INT FROM wt.products WHERE asset_class IS NOT NULL;
+----
+1
