@@ -122,7 +122,7 @@ export function makeProductsScan(client: WisdomtreeClient) {
 export function makeHoldingsScan(client: WisdomtreeClient) {
   const schema = holdingsSchema();
   return defineTableFunction<Record<string, never>, Record<string, never>>({
-    name: "holdings_scan",
+    name: "holdings",
     description:
       "Backing scan for the holdings table — prefer the `holdings` table. Detailed fund " +
       "holdings, hive-partitioned by fund_ticker: filter WHERE fund_ticker = 'DGRW' (or " +
@@ -179,8 +179,8 @@ export function makeHoldingsScan(client: WisdomtreeClient) {
       }
     },
     examples: [
-      { sql: "SELECT name, weight_percent FROM wisdomtree.main.holdings_scan() WHERE fund_ticker = 'DGRW' ORDER BY weight_percent DESC LIMIT 10", description: "Top 10 holdings of DGRW via the backing scan" },
-      { sql: "SELECT fund_ticker, count(*) FROM wisdomtree.main.holdings_scan() WHERE fund_ticker IN ('DGRW', 'EPS') GROUP BY fund_ticker", description: "Two partitions at once (fan-out)" },
+      { sql: "SELECT name, weight_percent FROM wisdomtree.main.holdings() WHERE fund_ticker = 'DGRW' ORDER BY weight_percent DESC LIMIT 10", description: "Top 10 holdings of DGRW via the backing scan" },
+      { sql: "SELECT fund_ticker, count(*) FROM wisdomtree.main.holdings() WHERE fund_ticker IN ('DGRW', 'EPS') GROUP BY fund_ticker", description: "Two partitions at once (fan-out)" },
     ],
     tags: {
       "vgi.category": "holdings",
@@ -192,7 +192,7 @@ export function makeHoldingsScan(client: WisdomtreeClient) {
         "weight_percent is in percent points (7.38 = 7.38%). WisdomTree publishes current " +
         "holdings only, so there is no historical as-of date.",
       "vgi.doc_md":
-        "## holdings_scan\n\n" +
+        "## holdings (backing scan)\n\n" +
         "The backing scan for the **`holdings` table** — prefer the table. Hive-partitioned by " +
         "`fund_ticker`: filter `WHERE fund_ticker = 'DGRW'` for one fund, or scan with no filter " +
         "to stream every fund (see the example queries). `fund_ticker` is distinct from the " +

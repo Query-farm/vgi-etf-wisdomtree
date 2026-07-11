@@ -145,8 +145,9 @@ column (each row's own constituent ticker; null for cash / FX rows). Other colum
 publication date — WisdomTree publishes **current holdings only**, so there is no historical time
 travel. Join `holdings.fund_ticker` to `products.ticker` for fund-level facts.
 
-> A backing `holdings_scan()` function is also exposed (it's what the table scans, and it's what
-> lets DuckDB push the `fund_ticker` filter) — prefer the `holdings` table.
+> A backing `holdings()` scan function is also exposed under the same name as the `holdings` table
+> (it's what the table scans, and it's what lets DuckDB push the `fund_ticker` filter) — prefer the
+> `holdings` table.
 
 ## Development
 

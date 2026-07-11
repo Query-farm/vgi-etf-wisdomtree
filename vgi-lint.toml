@@ -1,16 +1,17 @@
 [tool.vgi-lint-check]
 select = ["ALL"]
-# VGI311 (parameterless-table-function): waived for `holdings_scan`. It is the backing scan for
-# the `holdings` base table and MUST be a LISTED, parameterless table function so the DuckDB vgi
-# extension can discover its filter_pushdown capability and push the `fund_ticker` partition
-# filter into the table scan (verified in the sibling worker: unlisted → no pushdown). The
-# user-facing surface is the `holdings` table; holdings_scan is intentionally exposed too.
-# VGI807 (table-has-primary-key) / VGI809 (shared key-shaped column): waived. Funds are keyed by
-# their exchange `ticker`, which is the natural identifier; WisdomTree holdings carry no stable
-# per-fund numeric key. The identifier columns (ticker/figi) legitimately recur across products &
-# holdings with different meanings (fund vs constituent), so a cross-table FK would be wrong.
-ignore = ["VGI311", "VGI807", "VGI809"]
 fail_on = "info"
 
 [tool.vgi-lint-check.options]
 column_comment_min_ratio = 0.8
+
+[tool.vgi-lint-check.execution]
+# Widen the scan-responds (VGI911) window — this HIDES NO FINDING, it only gives a genuinely
+# network-bound scan time to answer. The UNFILTERED `SELECT * FROM holdings LIMIT 10` probe must,
+# on the coordinator, first fetch WisdomTree's whole US ETF products page to seed the fund
+# universe, then fetch the first fund's holdings page — two sequential HTTPS round trips that both
+# go through WisdomTree's Cloudflare edge via the system-`curl` fallback (a plain `fetch` is 403'd
+# on its TLS fingerprint). Cold, that comfortably clears within a minute but can exceed the 10s
+# default. A single-fund filtered scan (one round trip) answers well inside the default.
+scan_timeout = 60
+execute_timeout = 60

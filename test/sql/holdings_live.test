@@ -34,6 +34,6 @@ SELECT (count(*) >= 1)::INT FROM (SELECT * FROM wt.holdings LIMIT 5);
 
 # The backing scan function also works directly (pushdown).
 query I
-SELECT (count(*) > 50)::INT FROM wt.holdings_scan() WHERE fund_ticker = 'DGRW';
+SELECT (count(*) > 50)::INT FROM wt.holdings() WHERE fund_ticker = 'DGRW';
 ----
 1

@@ -1,8 +1,8 @@
 # vgi-etf-wisdomtree — agent notes
 
 A VGI (DuckDB) worker exposing WisdomTree US ETF data as two base **tables** — `products` (the
-catalog) and `holdings` (hive-partitioned) — plus the listed `holdings_scan` backing the holdings
-table. TypeScript, runs on Bun, built on `@query-farm/vgi` (the TS SDK). Keyless — no secret type,
+catalog) and `holdings` (hive-partitioned) — the holdings table's backing scan is a listed table
+function under the same `holdings` name (so DuckDB pushes the fund_ticker filter). TypeScript, runs on Bun, built on `@query-farm/vgi` (the TS SDK). Keyless — no secret type,
 no auth. Modeled closely on the sibling `vgi-etf-spdr` worker (file-download issuer, current holdings
 only); the KEY DIFFERENCE is the data SOURCE: WisdomTree has no JSON API and no `.xlsx` holdings —
 both the catalog and the holdings are embedded in the page HTML as Next.js `__next_f` RSC chunks.
@@ -21,7 +21,10 @@ its docs on `tags`/`comment`/`columnComments`. Two INDEPENDENT layers matter:
 `holdings`: backing `holdingsScan` MUST be **listed** (`functions: [...functions, holdingsScan]`)
 — an unlisted backing scan gets no `pushdown_filters` (the extension can't see its
 `filter_pushdown` capability), so the `fund_ticker` partition filter never reaches it. Hence a
-visible `holdings_scan()` is unavoidable; VGI311 is waived in `vgi-lint.toml`. There are NO other
+visible backing scan is unavoidable. To keep VGI311 clean (a listed parameterless table function
+should be exposed as a table), the scan is named `holdings` — the same name as the `holdings` table
+it backs — mirroring the sibling `vgi-etf-ishares` worker, rather than a distinct `holdings_scan`.
+There are NO other
 callable functions — `products` + `holdings` is the whole worker (no fund_details/nav_history:
 WisdomTree lazy-loads fund-level facts via a client API, so the static HTML has none — only labels).
 
@@ -96,7 +99,7 @@ Both planes stream their data as RSC payloads inside inline `self.__next_f.push(
   in non-UTC sessions). Percent columns carry a `_percent` suffix and hold **percent points**
   (`weight_percent` 7.38 = 7.38%). Non-percent numbers (`shares`, `market_value`) are unsuffixed.
 - **`src/functions.ts`** — two `defineTableFunction`s: `makeProductsScan` (unlisted products
-  backing scan) and `makeHoldingsScan` (`holdings_scan`, LISTED, filterPushdown, SINGLE_VALUE
+  backing scan) and `makeHoldingsScan` (`holdings`, LISTED, filterPushdown, SINGLE_VALUE
   partitions, queue/BoundStorage streaming). Each `make*` takes the `WisdomtreeClient` (`{get}`).
 - **`src/catalog.ts` / `src/worker.ts`** — catalog descriptor (no `secretTypes`) and the entry
   that wires the real client into the functions.
@@ -151,7 +154,7 @@ Typecheck must be a `bash scripts/typecheck.sh` file (not an inline package.json
 - vgi-lint rules to keep satisfied: catalog/schema descriptions must NOT enumerate the worker's own
   functions (VGI173); numeric column comments should state units/definition (VGI131 — e.g. "percent
   points", "Number of shares … held", "in USD"); every function needs an agent test task (VGI520 —
-  products/holdings/holdings_scan are covered in `catalog.ts` `vgi.agent_test_tasks`).
+  products / holdings table / holdings() scan are covered in `catalog.ts` `vgi.agent_test_tasks`).
 - Don't add a secret type; this worker is keyless by design.
 - Don't add an `xlsx` dependency — holdings are embedded JSON, not a spreadsheet.
 - Keep the `holdings` current-only contract: do NOT add `supportsTimeTravel` or an as-of arg.

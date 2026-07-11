@@ -150,7 +150,7 @@ const CATALOG_TAGS: Record<string, string> = {
   ]),
   // Agent-suitability suite (catalog only). Each task carries a deterministic check_sql that
   // asserts specific ground truth; reference_sql is deliberately omitted (live data). One task per
-  // callable surface (products, holdings, holdings_scan) satisfies VGI520.
+  // callable surface (products, holdings table, holdings() scan) satisfies VGI520.
   "vgi.agent_test_tasks": JSON.stringify([
     {
       name: "dgrw_exists",
@@ -172,9 +172,9 @@ const CATALOG_TAGS: Record<string, string> = {
     },
     {
       name: "dgrw_holdings_scan",
-      prompt: "Using the holdings backing scan, list a few DGRW constituents by weight.",
-      check_sql: "SELECT count(*) > 0 FROM wisdomtree.main.holdings_scan() WHERE fund_ticker = 'DGRW'",
-      success_criteria: "The answer returns DGRW constituents via holdings_scan() filtered by fund_ticker.",
+      prompt: "Using the holdings backing scan function, list a few DGRW constituents by weight.",
+      check_sql: "SELECT count(*) > 0 FROM wisdomtree.main.holdings() WHERE fund_ticker = 'DGRW'",
+      success_criteria: "The answer returns DGRW constituents via the holdings() backing scan function filtered by fund_ticker.",
     },
   ]),
 };
@@ -254,6 +254,11 @@ export function makeCatalog(
             arguments: new Arguments([], new Map()),
             // fund_ticker is always populated (the scan tags every row with its fund).
             notNull: ["fund_ticker"],
+            // Advisory composite key (NOT enforced on scan): a holdings row is one constituent of
+            // one fund, so (fund_ticker, ticker) is how an agent references a row. `ticker`
+            // completes the key for securities; a small number of non-equity line items (cash, FX)
+            // carry a null constituent ticker.
+            primaryKey: [["fund_ticker", "ticker"]],
             // Hive partition key: fund_ticker. A WHERE fund_ticker = … / IN (…) filter is pushed
             // down to fetch just those funds; an unfiltered scan streams every fund (all partitions).
             // WisdomTree publishes current holdings only, so there is NO time travel.

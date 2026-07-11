@@ -71,15 +71,15 @@ test("catalog is discoverable over HTTP", async () => {
   }
 });
 
-test("the products/holdings tables (and holdings_scan) are exposed over HTTP", async () => {
+test("the products/holdings tables (and the holdings scan) are exposed over HTTP", async () => {
   const rpc = httpConnect(baseUrl, { prefix: PREFIX });
   try {
     const client = new VgiClient(rpc);
     const attach = await client.catalogAttach("wisdomtree");
     const fns = await client.schemaContentsFunctions(attach.attach_opaque_data, "main", "TABLE_FUNCTION");
-    // holdings_scan is listed (required so the extension pushes the ticker filter into the
-    // holdings table); products' backing scan stays unlisted.
-    expect(fns.map((f) => f.name).sort()).toEqual(["holdings_scan"]);
+    // The holdings backing scan is listed under the same name as the holdings table (required so
+    // the extension pushes the ticker filter into the holdings table); products' scan stays unlisted.
+    expect(fns.map((f) => f.name).sort()).toEqual(["holdings"]);
     // products and holdings are base TABLES.
     const tables = await client.schemaContentsTables(attach.attach_opaque_data, "main");
     expect(tables.map((t) => t.name).sort()).toEqual(["holdings", "products"]);
