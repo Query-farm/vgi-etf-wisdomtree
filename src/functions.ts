@@ -198,6 +198,12 @@ export function makeHoldingsScan(client: WisdomtreeClient) {
         "to stream every fund (see the example queries). `fund_ticker` is distinct from the " +
         "constituent `ticker` column.",
       "vgi.result_columns_schema": resultColumnsSchema(holdingsSchema(), HOLDINGS_SCAN_DESCS),
+      // Mirror `examples` as described example_queries — the native duckdb_functions().examples
+      // carrier drops descriptions, so VGI515 needs the descriptions on this tag.
+      "vgi.example_queries": JSON.stringify([
+        { description: "Top 10 holdings of DGRW via the backing scan", sql: "SELECT name, weight_percent FROM wisdomtree.main.holdings() WHERE fund_ticker = 'DGRW' ORDER BY weight_percent DESC LIMIT 10" },
+        { description: "Two partitions at once (fan-out)", sql: "SELECT fund_ticker, count(*) FROM wisdomtree.main.holdings() WHERE fund_ticker IN ('DGRW', 'EPS') GROUP BY fund_ticker" },
+      ]),
     },
   });
 }
