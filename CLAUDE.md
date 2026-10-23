@@ -154,7 +154,9 @@ Typecheck must be a `bash scripts/typecheck.sh` file (not an inline package.json
 - vgi-lint rules to keep satisfied: catalog/schema descriptions must NOT enumerate the worker's own
   functions (VGI173); numeric column comments should state units/definition (VGI131 — e.g. "percent
   points", "Number of shares … held", "in USD"); every function needs an agent test task (VGI520 —
-  products / holdings table / holdings() scan are covered in `catalog.ts` `vgi.agent_test_tasks`).
+  products / holdings table / holdings() scan are covered in `catalog.ts` `vgi.agent_test_tasks`;
+  the tag publishes only `name` + `prompt` — grader fields (`check_sql`, `success_criteria`) live
+  in the private root sidecar `vgi-agent-tests.yaml` (VGI416)).
 - Don't add a secret type; this worker is keyless by design.
 - Don't add an `xlsx` dependency — holdings are embedded JSON, not a spreadsheet.
 - Keep the `holdings` current-only contract: do NOT add `supportsTimeTravel` or an as-of arg.

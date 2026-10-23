@@ -150,33 +150,25 @@ const CATALOG_TAGS: Record<string, string> = {
       sql: "SELECT name, ticker, weight_percent FROM wisdomtree.main.holdings WHERE fund_ticker = 'DGRW' ORDER BY weight_percent DESC LIMIT 5",
     },
   ]),
-  // Agent-suitability suite (catalog only). Each task carries a deterministic check_sql that
-  // asserts specific ground truth; reference_sql is deliberately omitted (live data). One task per
-  // callable surface (products, holdings table, holdings() scan) satisfies VGI520.
+  // The agent-suitability suite (catalog only). The published tag carries ONLY `name` +
+  // `prompt` — the grader fields (check_sql, success_criteria) live in the private sidecar
+  // vgi-agent-tests.yaml, keyed by name, so the analyst agent never sees them (VGI416).
   "vgi.agent_test_tasks": JSON.stringify([
     {
       name: "dgrw_exists",
       prompt: "Does WisdomTree offer an ETF with the ticker DGRW, and what is it called?",
-      check_sql: "SELECT count(*) > 0 FROM wisdomtree.main.products WHERE ticker = 'DGRW'",
-      success_criteria: "The answer confirms DGRW is the WisdomTree U.S. Quality Dividend Growth Fund, found via the products table.",
     },
     {
       name: "equity_funds",
       prompt: "List a few WisdomTree domestic-equity ETFs.",
-      check_sql: "SELECT count(*) > 0 FROM wisdomtree.main.products WHERE asset_class = 'Domestic Equity'",
-      success_criteria: "The answer names several domestic-equity WisdomTree ETFs from the products table.",
     },
     {
       name: "dgrw_top_holding",
       prompt: "What is the single largest holding of the WisdomTree U.S. Quality Dividend Growth Fund (DGRW) right now?",
-      check_sql: "SELECT count(*) > 0 FROM wisdomtree.main.holdings WHERE fund_ticker = 'DGRW'",
-      success_criteria: "The answer names DGRW's top holding by weight, obtained from the holdings table.",
     },
     {
       name: "dgrw_holdings_scan",
       prompt: "Using the holdings backing scan function, list a few DGRW constituents by weight.",
-      check_sql: "SELECT count(*) > 0 FROM wisdomtree.main.holdings() WHERE fund_ticker = 'DGRW'",
-      success_criteria: "The answer returns DGRW constituents via the holdings() backing scan function filtered by fund_ticker.",
     },
   ]),
 };
