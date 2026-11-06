@@ -15,3 +15,11 @@ column_comment_min_ratio = 0.8
 # default. A single-fund filtered scan (one round trip) answers well inside the default.
 scan_timeout = 60
 execute_timeout = 60
+
+[tool.vgi-lint-check.per_object]
+# holdings has no column set the scan can guarantee unique + non-null: the constituent ticker is
+# null for cash / FX line items and WisdomTree publishes no row id, and vgi.v3 constraint records
+# are ENFORCED engine facts (DuckDB trusts them), so no PRIMARY KEY is declared.
+"wisdomtree.main.holdings" = { ignore = [
+  { code = "VGI807", kind = "domain-exemption", reason = "no guaranteed-unique non-null key in WisdomTree holdings (null constituent ticker on cash/FX rows); vgi.v3 PKs are enforced facts" },
+] }

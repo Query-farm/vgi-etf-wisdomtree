@@ -7,11 +7,13 @@
 // catalog-qualified (wisdomtree.main.<obj>) so it binds/runs when the catalog is attached.
 
 import type { CatalogDescriptor, VgiFunction } from "@query-farm/vgi";
-import { Arguments } from "@query-farm/vgi";
+import { Arguments, constraintRecord } from "@query-farm/vgi";
 import { productsSchema, holdingsSchema, resultColumnsSchema } from "./schema.js";
 
 const REPO = "https://github.com/Query-farm/vgi-etf-wisdomtree";
 const ISSUES = `${REPO}/issues`;
+/** schemaPath for the canonical vgi.v3 constraint records (exactly one component: the schema). */
+const S = ["main"];
 
 /** Per-column comments for the products table (surface as Arrow field metadata). */
 const PRODUCTS_COLUMN_COMMENTS: Record<string, string> = {
@@ -232,8 +234,12 @@ export function makeCatalog(
             name: "products",
             function: productsScan,
             arguments: new Arguments([], new Map()),
-            // Each fund is identified by its exchange ticker (advisory — not enforced on scan).
-            primaryKey: [["ticker"]],
+            // Each fund is identified by its exchange ticker. The scan guarantees it: parseProducts
+            // only emits rows with a matched (never null) ticker and dedupes by ticker.
+            constraints: [
+              constraintRecord({ schemaPath: S, table: "products", id: "products.pk",
+                kind: "PRIMARY_KEY", columns: [["ticker"]], enforcement: "ENFORCED", validation: "ALL_ROWS" }),
+            ],
             // The WisdomTree US ETF lineup is ~85 funds; headroom to ~150.
             inlinedCardinality: { estimate: 85n, max: 150n },
             comment:
@@ -246,13 +252,17 @@ export function makeCatalog(
             name: "holdings",
             function: holdingsScan,
             arguments: new Arguments([], new Map()),
-            // fund_ticker is always populated (the scan tags every row with its fund).
-            notNull: ["fund_ticker"],
-            // Advisory composite key (NOT enforced on scan): a holdings row is one constituent of
-            // one fund, so (fund_ticker, ticker) is how an agent references a row. `ticker`
-            // completes the key for securities; a small number of non-equity line items (cash, FX)
-            // carry a null constituent ticker.
-            primaryKey: [["fund_ticker", "ticker"]],
+            // vgi.v3 records are engine facts (ENFORCED), so attest only what the scan guarantees:
+            // fund_ticker is always populated (the scan tags every row with its fund) and name is
+            // never null (parseHoldings skips nameless items). The old advisory composite key
+            // (fund_ticker, ticker) is NOT a valid PRIMARY KEY: cash / FX line items carry a null
+            // constituent ticker.
+            constraints: [
+              constraintRecord({ schemaPath: S, table: "holdings", id: "holdings.fund_ticker.not_null",
+                kind: "NOT_NULL", columns: [["fund_ticker"]], enforcement: "ENFORCED", validation: "ALL_ROWS" }),
+              constraintRecord({ schemaPath: S, table: "holdings", id: "holdings.name.not_null",
+                kind: "NOT_NULL", columns: [["name"]], enforcement: "ENFORCED", validation: "ALL_ROWS" }),
+            ],
             // Hive partition key: fund_ticker. A WHERE fund_ticker = … / IN (…) filter is pushed
             // down to fetch just those funds; an unfiltered scan streams every fund (all partitions).
             // WisdomTree publishes current holdings only, so there is NO time travel.

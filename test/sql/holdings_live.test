@@ -7,7 +7,7 @@ require-env VGI_TEST_WORKER
 require-env WT_LIVE
 
 statement ok
-ATTACH 'wisdomtree' AS wt (TYPE vgi, LOCATION '${VGI_TEST_WORKER}');
+ATTACH 'wisdomtree' AS wt (TYPE vgi, LOCATION '{VGI_TEST_WORKER}');
 
 statement ok
 SET search_path='wt.main';
