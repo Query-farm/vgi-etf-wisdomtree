@@ -22,7 +22,7 @@ const { registry, catalogInterface } = makeWorkerParts();
 serveVgiWorker({
   name: "wisdomtree",
   doc: "WisdomTree US ETF data: product catalog and current holdings.",
-  version: "0.2.0",
+  version: "0.3.0",
   repositoryUrl: "https://github.com/Query-farm/vgi-etf-wisdomtree",
   serverId: "vgi-etf-wisdomtree",
   registry,
