@@ -109,6 +109,7 @@ const HOLDINGS_TABLE_TAGS: Record<string, string> = {
 /** Catalog-level tags: docs, discovery, provenance, and the agent-test suite. */
 const CATALOG_TAGS: Record<string, string> = {
   "vgi.title": "WisdomTree ETFs",
+  "vgi.subtitle": "The WisdomTree US ETF lineup and each fund's current holdings, as SQL tables.",
   "vgi.doc_llm":
     "WisdomTree US ETF data as SQL tables. Reach for it to browse the ETF lineup and its " +
     "asset-class classification, and to inspect what a fund currently holds. The central concept " +
