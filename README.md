@@ -242,3 +242,7 @@ commercial use. This worker is not affiliated with or endorsed by WisdomTree.
 ## License
 
 MIT — Copyright 2026 Query Farm LLC · https://query.farm
+
+## Executed notebook
+
+Explore [weight precision and implied-denominator rounding error](notebooks/README.md) with recorded and live holdings.

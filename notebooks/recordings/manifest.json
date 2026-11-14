@@ -1,0 +1,29 @@
+{
+  "source": "WisdomTree official current holdings website and public JSON route",
+  "records": [
+    {
+      "file": "products.html",
+      "url": "https://www.wisdomtree.com/us/products",
+      "captured_at_utc": "2026-11-14T07:04:41.781Z",
+      "sha256": "cb179995f0d9bfb8cb3b5b56cb1ffd0624f35824423cafc10eb93e766b6fceb9",
+      "bytes": 905578,
+      "encoding": "decoded official response text saved unchanged as UTF-8"
+    },
+    {
+      "file": "dgrw.html",
+      "url": "https://www.wisdomtree.com/us/products/equity/dgrw",
+      "captured_at_utc": "2026-11-14T07:04:42.267Z",
+      "sha256": "da4c436124d19435f983c114f0df467891df03c1d3277c0a62fb803335653644",
+      "bytes": 1337807,
+      "encoding": "decoded official response text saved unchanged as UTF-8"
+    },
+    {
+      "file": "holdings.json",
+      "url": "https://www.wisdomtree.com/api/fund-holdings/1000521",
+      "captured_at_utc": "2026-11-14T07:04:42.815Z",
+      "sha256": "d0e0e3557536727bfeff39db6fac4e5398f87e4742dcf421bb91b17aaa579b7b",
+      "bytes": 91478,
+      "encoding": "decoded official response text saved unchanged as UTF-8"
+    }
+  ]
+}
