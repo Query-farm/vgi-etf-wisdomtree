@@ -91,3 +91,40 @@ test("an injected fetch never triggers the curl fallback (a 403 throws instead)"
   const { get } = makeWisdomtreeGet(impl, { catalogCacheMs: 0 });
   await expect(get(PRODUCTS_URL)).rejects.toThrow(/HTTP 403/);
 });
+
+// Regression: the holdings scan skips a fund whose fetch throws, so one transient blip (a 503,
+// a reset connection) silently dropped that fund's rows from a whole-lineup join. Transient
+// failures are now retried; a definitive 4xx is not.
+test("transient failures (5xx, 429, network error) are retried; a 404 is not", async () => {
+  const script: Array<number | "throw"> = [503, "throw", 429, 200];
+  const calls: string[] = [];
+  const impl = (async (url: string) => {
+    calls.push(url);
+    const s = script.shift();
+    if (s === "throw") throw new TypeError("fetch failed");
+    return { ok: s === 200, status: s, text: async () => (s === 200 ? "<html>ok</html>" : "err") } as unknown as Response;
+  }) as unknown as typeof globalThis.fetch;
+  const { get } = makeWisdomtreeGet(impl, { retries: 3, retryDelayMs: 0 });
+  expect(await get(FUND_URL)).toBe("<html>ok</html>");
+  expect(calls.length).toBe(4);
+
+  const notFound: string[] = [];
+  const impl404 = (async (url: string) => {
+    notFound.push(url);
+    return { ok: false, status: 404, text: async () => "nope" } as unknown as Response;
+  }) as unknown as typeof globalThis.fetch;
+  const c404 = makeWisdomtreeGet(impl404, { retries: 3, retryDelayMs: 0 });
+  await expect(c404.get(FUND_URL)).rejects.toThrow(/HTTP 404/);
+  expect(notFound.length).toBe(1);
+});
+
+test("retries are bounded: the last transient error is thrown", async () => {
+  let n = 0;
+  const impl = (async () => {
+    n++;
+    return { ok: false, status: 502, text: async () => "bad gateway" } as unknown as Response;
+  }) as unknown as typeof globalThis.fetch;
+  const { get } = makeWisdomtreeGet(impl, { retries: 2, retryDelayMs: 0 });
+  await expect(get(FUND_URL)).rejects.toThrow(/HTTP 502/);
+  expect(n).toBe(3);
+});

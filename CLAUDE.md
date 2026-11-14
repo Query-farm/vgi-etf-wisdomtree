@@ -45,6 +45,8 @@ scan streams every fund** (one partition per fund). Mechanics:
   `as_of_date` is a real output column populated from each holding's `dt` field.
 - **Skip-tolerant.** A fund page with no embedded `fundHoldingDetails` (or a fetch error) is
   skipped so an all-funds scan never fails on one fund.
+  Because a skipped fund silently drops rows, the client retries transient failures (network
+  error, curl failure, HTTP 429/5xx; 2 retries, backoff) before giving up — `retries` option.
 - **`filterPushdown: true`** + LISTED → the extension pushes the `fund_ticker` filter into the scan.
   **`autoApplyFilters: true` is required**: DuckDB drops every pushed predicate from its own plan,
   so without it `WHERE ticker = 'NVDA'` / `asset_group = 'EQ'` were silently ignored.

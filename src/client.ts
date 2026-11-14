@@ -50,7 +50,19 @@ export interface WisdomtreeClientOptions {
    * a custom `fetchImpl` is injected, so the unit tests never shell out or touch the network.
    */
   curlFallback?: boolean;
+  /**
+   * Extra attempts after a TRANSIENT failure (network error, curl failure, HTTP 429 or 5xx).
+   * Default 2 for the real platform fetch, 0 when a custom `fetchImpl` is injected (so tests keep
+   * exact call counts unless they opt in). Without it one blip silently dropped a fund from a
+   * scan: the holdings scan is skip-tolerant, so a failed fetch meant missing rows, not an error.
+   */
+  retries?: number;
+  /** Base backoff between retries in ms (attempt n waits n × this). Default 500. */
+  retryDelayMs?: number;
 }
+
+/** A definitive HTTP answer (4xx other than 429) — never retried. Everything else thrown is. */
+class PermanentHttpError extends Error {}
 
 /** Fetch a page over HTTP/1.1 with the system `curl`, browser UA. Throws if curl is unavailable/fails. */
 async function curlGet(url: string): Promise<string> {
@@ -81,9 +93,11 @@ export function makeWisdomtreeGet(
   const now = opts.now ?? (() => Date.now());
   // The curl fallback is only meaningful for the real platform fetch; an injected fetch disables it.
   const curlFallback = opts.curlFallback ?? fetchImpl === globalThis.fetch;
+  const retries = opts.retries ?? (fetchImpl === globalThis.fetch ? 2 : 0);
+  const retryDelayMs = opts.retryDelayMs ?? 500;
   let catalog: { at: number; value: Promise<string> } | null = null;
 
-  const rawGet = async (url: string): Promise<string> => {
+  const attemptGet = async (url: string): Promise<string> => {
     const res = await fetchImpl(url, {
       headers: { "User-Agent": UA, Accept: ACCEPT, "Accept-Language": ACCEPT_LANG },
     });
@@ -91,9 +105,23 @@ export function makeWisdomtreeGet(
     if (res.status === 403 && curlFallback) return curlGet(url);
     if (!res.ok) {
       const body = await res.text().catch(() => "");
-      throw new Error(`wisdomtree: HTTP ${res.status} for ${url} — ${body.slice(0, 200)}`);
+      const msg = `wisdomtree: HTTP ${res.status} for ${url} — ${body.slice(0, 200)}`;
+      throw res.status === 429 || res.status >= 500 ? new Error(msg) : new PermanentHttpError(msg);
     }
     return res.text();
+  };
+
+  // Retry transient failures (network error, failed curl, HTTP 429/5xx); a definitive 4xx answer
+  // (PermanentHttpError) is thrown straight away.
+  const rawGet = async (url: string): Promise<string> => {
+    for (let attempt = 0; ; attempt++) {
+      try {
+        return await attemptGet(url);
+      } catch (e) {
+        if (e instanceof PermanentHttpError || attempt >= retries) throw e;
+        await new Promise((r) => setTimeout(r, retryDelayMs * (attempt + 1)));
+      }
+    }
   };
 
   const get = async (url: string): Promise<string> => {

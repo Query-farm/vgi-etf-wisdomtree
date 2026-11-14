@@ -39,7 +39,7 @@ tasks:
         SELECT 1 FROM truth t
         LEFT JOIN top_holdings a
           ON upper(trim(a.fund_ticker)) = t.fund_ticker
-          AND upper(trim(a.ticker)) = t.ticker
+          AND upper(trim(a.ticker)) IS NOT DISTINCT FROM t.ticker
         WHERE a.fund_ticker IS NULL
       )
     success_criteria: "The answer gives, for each Domestic Equity fund in the products table, its top holding by weight from the holdings table, saved in top_holdings."
