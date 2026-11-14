@@ -144,6 +144,23 @@ column (each row's own constituent ticker; null for cash / FX rows). Other colum
 publication date — WisdomTree publishes **current holdings only**, so there is no historical time
 travel. Join `holdings.fund_ticker` to `products.ticker` for fund-level facts.
 
+### Combining the catalog with holdings
+
+Join `holdings.fund_ticker` to `products.ticker` to work across a slice of the lineup. A filter on
+`products` doesn't narrow which funds are fetched, so these scan every fund's holdings (~15–20 s):
+
+```sql
+-- Stocks held by the most Large Cap Value funds, with their average weight:
+SELECT h.ticker, h.name, count(*) AS funds_holding,
+       round(avg(h.weight_percent), 2) AS avg_weight_percent
+FROM wisdomtree.main.products p
+JOIN wisdomtree.main.holdings h ON h.fund_ticker = p.ticker
+WHERE p.category = 'Large Cap Value' AND h.asset_group = 'EQ'
+GROUP BY h.ticker, h.name
+ORDER BY funds_holding DESC, avg_weight_percent DESC, h.ticker
+LIMIT 10;
+```
+
 > A backing `holdings()` scan function is also exposed under the same name as the `holdings` table
 > (it's what the table scans, and it's what lets DuckDB push the `fund_ticker` filter) — prefer the
 > `holdings` table.
@@ -184,9 +201,12 @@ React Server Component payloads inside inline `self.__next_f.push([…])` script
 - **Catalog** — `GET /us/products` embeds the whole lineup as Sanity `internalLink` product
   objects (ticker, title, category tiers, slug). `extractNextF()` concatenates + unescapes the
   chunks; `parseProducts()` reads the product objects out of the decoded payload.
-- **Holdings** — `GET /us/products/{slug}` (e.g. `equity/dgrw`) embeds the fund's full constituent
-  list as a `fundHoldingDetails` array — real values (securityName, securityTicker, shares,
-  marketValueBase, wgt, figi), not just a rendered top-10. `parseHoldings()` reads that array.
+- **Holdings** — `GET /us/products/{slug}` (e.g. `equity/dgrw`) carries the fund's `entityId`;
+  since November 2026 the page no longer embeds the constituent list (`"fundHoldingDetails":
+  "$undefined"`, only a top-100 ranking), and its holdings modal loads the full list from the
+  keyless JSON route `GET /api/fund-holdings/{entityId}` — real values (securityName,
+  securityTicker, shares, marketValueBase, wgt, figi). `fetchHoldings()` reads an embedded
+  `fundHoldingDetails` array when present and otherwise follows the entityId to that route.
 
 So `client.get(url)` returns page **text** (HTML), and the driver extracts the embedded JSON.
 There is **no `.xlsx`/CSV holdings download** — the only spreadsheet linked from a fund page is a

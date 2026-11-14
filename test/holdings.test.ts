@@ -3,9 +3,16 @@
 // (imports only our own src + the fake, no @query-farm).
 
 import { test, expect } from "bun:test";
-import { parseHoldings, fetchHoldings, parseDate } from "../src/wisdomtree.js";
+import {
+  parseHoldings,
+  fetchHoldings,
+  parseDate,
+  fundPageUrl,
+  fundHoldingsApiUrl,
+} from "../src/wisdomtree.js";
 import {
   FakeWisdomtree,
+  nextPage,
   dgrwHoldingsPayload,
   epsHoldingsPayload,
 } from "./fake-wisdomtree.js";
@@ -61,4 +68,40 @@ test("fetchHoldings on a second fund returns that fund's rows", async () => {
   expect(rows.map((r) => r.ticker)).toEqual(["MSFT", "AVGO"]);
   // sanity: the EPS payload really is distinct from DGRW's
   expect(epsHoldingsPayload()).toContain("Microsoft Corp");
+});
+
+// Regression: since 2026-11 the real fund page no longer embeds the constituent list — it ships
+// `"fundHoldingDetails":"$undefined"` + the fund's entityId, and the holdings modal lazy-loads the
+// same objects from /api/fund-holdings/{entityId}. The old parser silently returned 0 rows for
+// EVERY fund (holdings table empty). fetchHoldings must follow the entityId to the JSON route.
+test("fetchHoldings follows the page's entityId to /api/fund-holdings when nothing is embedded", async () => {
+  const page =
+    '{"sectionKey":"holdings","ranking":[{"constituentName":"Microsoft Corp","pctWeight":0.078}],' +
+    '"entityId":"1000521","fundHoldingDetails":"$undefined","tableFooter":"$L88"}';
+  const api = JSON.stringify([
+    { dt: "2026-11-13T00:00:00.000Z", fundTicker: "DGRW", assetGroup: "EQ", securityTicker: "NVDA UQ",
+      securityName: "Nvidia Corp", shares: 6778519, marketValueBase: 1103881819.15, wgt: 0.0629, figi: "BBG000BBJQV0" },
+    { dt: "2026-11-13T00:00:00.000Z", fundTicker: "DGRW", assetGroup: "EQ", securityTicker: "MSFT US",
+      securityName: "Microsoft Corp", shares: 2629891, marketValueBase: 1377747297.08, wgt: 0.0786, figi: "BBG000BPH459" },
+  ]);
+  const fake = new FakeWisdomtree((url) => {
+    if (url === fundPageUrl("equity/dgrw")) return nextPage(page);
+    if (url === fundHoldingsApiUrl("1000521")) return api;
+    throw new Error(`404 for ${url}`);
+  });
+  const rows = await fetchHoldings(fake.get, { ticker: "dgrw", slug: "equity/dgrw" });
+  expect(fake.calls).toEqual([
+    "https://www.wisdomtree.com/us/products/equity/dgrw",
+    "https://www.wisdomtree.com/api/fund-holdings/1000521",
+  ]);
+  expect(rows.map((r) => r.ticker)).toEqual(["MSFT", "NVDA"]); // weight-desc, suffix stripped
+  expect(rows[0]!.fundTicker).toBe("DGRW");
+  expect(rows[0]!.weightPercent).toBeCloseTo(7.86, 5);
+  expect(rows[0]!.asOfDate).toBe(Math.floor(Date.UTC(2026, 10, 13) / 1000));
+});
+
+test("fetchHoldings returns [] when the page has neither embedded holdings nor an entityId", async () => {
+  const fake = new FakeWisdomtree(() => nextPage('{"fundHoldingDetails":"$undefined"}'));
+  expect(await fetchHoldings(fake.get, { ticker: "X", slug: "equity/x" })).toEqual([]);
+  expect(fake.calls.length).toBe(1);
 });

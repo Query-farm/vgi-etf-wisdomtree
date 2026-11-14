@@ -132,6 +132,11 @@ export function makeHoldingsScan(client: WisdomtreeClient) {
     // extension can discover the capability and push the fund_ticker filter into the table scan.
     // Each fund is one SINGLE_VALUE partition (fund_ticker is the hive partition key).
     filterPushdown: true,
+    // DuckDB drops every pushed predicate from its own plan, so the scan must apply them all:
+    // fund_ticker only picks the partitions to fetch, and any other pushed filter (ticker = 'NVDA',
+    // asset_group = 'EQ', weight_percent > 5, ...) would otherwise be silently ignored and return
+    // every row of the fetched funds.
+    autoApplyFilters: true,
     partitionKind: "SINGLE_VALUE_PARTITIONS",
     maxWorkers: DEFAULT_MAX_WORKERS,
     onBind: () => ({ outputSchema: schema }),

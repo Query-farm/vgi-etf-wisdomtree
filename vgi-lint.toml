@@ -14,7 +14,11 @@ column_comment_min_ratio = 0.8
 # on its TLS fingerprint). Cold, that comfortably clears within a minute but can exceed the 10s
 # default. A single-fund filtered scan (one round trip) answers well inside the default.
 scan_timeout = 60
-execute_timeout = 60
+# Per-query cap for running examples/graders. The [execution] key is `timeout` (an
+# `execute_timeout` key here is silently ignored and leaves the 30s default). The composed
+# products × holdings examples scan every fund (~15-20s alone, longer when the linter runs them
+# concurrently), so they need the wider window too.
+timeout = 90
 
 [tool.vgi-lint-check.per_object]
 # holdings has no column set the scan can guarantee unique + non-null: the constituent ticker is

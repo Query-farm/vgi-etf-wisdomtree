@@ -9,6 +9,7 @@
 import type { CatalogDescriptor, VgiFunction } from "@query-farm/vgi";
 import { Arguments, constraintRecord } from "@query-farm/vgi";
 import { productsSchema, holdingsSchema, resultColumnsSchema } from "./schema.js";
+import { LCV_CONSENSUS_HOLDINGS, NVDA_HOLDERS, DGRW_DLN_OVERLAP } from "./examples.js";
 
 const REPO = "https://github.com/Query-farm/vgi-etf-wisdomtree";
 const ISSUES = `${REPO}/issues`;
@@ -51,6 +52,7 @@ const PRODUCTS_TABLE_TAGS: Record<string, string> = {
     { description: "All WisdomTree US ETFs", sql: "SELECT ticker, fund_name, asset_class FROM wisdomtree.main.products ORDER BY ticker" },
     { description: "Domestic-equity funds", sql: "SELECT ticker, fund_name, category FROM wisdomtree.main.products WHERE asset_class = 'Domestic Equity' ORDER BY ticker" },
     { description: "Look up a single fund by ticker", sql: "SELECT ticker, fund_name, asset_class FROM wisdomtree.main.products WHERE ticker = 'DGRW'" },
+    LCV_CONSENSUS_HOLDINGS,
     { description: "Fund count by asset class", sql: "SELECT asset_class, count(*) AS fund_count FROM wisdomtree.main.products GROUP BY asset_class ORDER BY fund_count DESC" },
   ]),
   "vgi.result_columns_schema": resultColumnsSchema(productsSchema(), PRODUCTS_COLUMN_COMMENTS),
@@ -101,6 +103,8 @@ const HOLDINGS_TABLE_TAGS: Record<string, string> = {
   "vgi.example_queries": JSON.stringify([
     { description: "Top 10 current holdings of DGRW", sql: "SELECT name, ticker, weight_percent FROM wisdomtree.main.holdings WHERE fund_ticker = 'DGRW' ORDER BY weight_percent DESC LIMIT 10" },
     { description: "Largest positions by market value", sql: "SELECT name, market_value FROM wisdomtree.main.holdings WHERE fund_ticker = 'DGRW' ORDER BY market_value DESC LIMIT 10" },
+    NVDA_HOLDERS,
+    DGRW_DLN_OVERLAP,
     { description: "Two funds at once (partition fan-out)", sql: "SELECT fund_ticker, name, weight_percent FROM wisdomtree.main.holdings WHERE fund_ticker IN ('DGRW', 'EPS')" },
     { description: "Top holdings enriched with the fund name (join to products)", sql: "SELECT p.fund_name, h.name, h.weight_percent FROM wisdomtree.main.holdings h JOIN wisdomtree.main.products p ON h.fund_ticker = p.ticker WHERE h.fund_ticker = 'DGRW' ORDER BY h.weight_percent DESC LIMIT 10" },
   ]),
@@ -173,6 +177,13 @@ const CATALOG_TAGS: Record<string, string> = {
       name: "dgrw_holdings_scan",
       prompt: "Using the holdings backing scan function, list a few DGRW constituents by weight.",
     },
+    {
+      name: "domestic_equity_top_holdings",
+      prompt:
+        "For every WisdomTree Domestic Equity ETF, what is its single largest current holding by " +
+        "weight? Save your answer as a temp table named top_holdings with columns fund_ticker " +
+        "(VARCHAR, the fund's ticker) and ticker (VARCHAR, the constituent's ticker), one row per fund.",
+    },
   ]),
 };
 
@@ -200,6 +211,9 @@ const SCHEMA_TAGS: Record<string, string> = {
   "vgi.example_queries": JSON.stringify([
     { description: "The WisdomTree US ETF lineup", sql: "SELECT ticker, fund_name, asset_class FROM wisdomtree.main.products ORDER BY ticker" },
     { description: "Top holdings of DGRW", sql: "SELECT name, ticker, weight_percent FROM wisdomtree.main.holdings WHERE fund_ticker = 'DGRW' ORDER BY weight_percent DESC LIMIT 10" },
+    LCV_CONSENSUS_HOLDINGS,
+    NVDA_HOLDERS,
+    DGRW_DLN_OVERLAP,
   ]),
 };
 

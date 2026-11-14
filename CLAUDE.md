@@ -46,6 +46,9 @@ scan streams every fund** (one partition per fund). Mechanics:
 - **Skip-tolerant.** A fund page with no embedded `fundHoldingDetails` (or a fetch error) is
   skipped so an all-funds scan never fails on one fund.
 - **`filterPushdown: true`** + LISTED → the extension pushes the `fund_ticker` filter into the scan.
+  **`autoApplyFilters: true` is required**: DuckDB drops every pushed predicate from its own plan,
+  so without it `WHERE ticker = 'NVDA'` / `asset_group = 'EQ'` were silently ignored.
+- Composed example SQL (products × holdings) lives once in `src/examples.ts`; catalog.ts references it.
 - **`fund_ticker` is a SEPARATE column from `ticker`** — `ticker` is the CONSTITUENT's own ticker
   (null for cash/FX rows); `fund_ticker` is the fund's ticker, constant per fund. The scan tags
   every row with the requested fund ticker, upper-cased.
@@ -112,9 +115,13 @@ Two keyless HTML pages, both behind Cloudflare (browser UA + possibly the curl f
    as `internalLink` product objects in the `__next_f` stream. Backs `products` and the ticker→slug
    resolution. No per-fund financials are embedded (expense ratio / AUM / NAV are lazy-loaded via a
    client API) — only ticker, name (`title`), category tiers, and slug.
-2. **fund page** — `GET /us/products/{slug}` (slug e.g. `equity/dgrw`, from the catalog). ~2 MB
-   HTML; the full constituent list is the `fundHoldingDetails` array in the `__next_f` stream.
-   Current holdings only.
+2. **fund page** — `GET /us/products/{slug}` (slug e.g. `equity/dgrw`, from the catalog). ~1.3 MB
+   HTML. Until 2026-11 it embedded the full constituent list as the `fundHoldingDetails` array;
+   it now ships `"fundHoldingDetails":"$undefined"` (plus a top-100 `ranking` without tickers)
+   and the page's `entityId`. 3. **`GET /api/fund-holdings/{entityId}`** — keyless JSON array of
+   the same `fundHoldingDetails` objects (what the holdings modal fetches). `fetchHoldings` uses
+   the embedded array if present, else follows `fundEntityId(payload)` to this route. Current
+   holdings only.
 
 **Dates:** holdings carry a `dt` field as an ISO timestamp with React Server Components' `$D`
 sentinel prefix (`"$D2026-07-08T00:00:00.000Z"`). `parseDate` strips `$D`, keeps the UTC calendar

@@ -7,14 +7,18 @@
 // pages (there is no public JSON API — WisdomTree's own Sanity GROQ endpoint is ACL-locked):
 //
 //   /us/products                       → products   (the whole US ETF lineup, ~85 funds)
-//   /us/products/{slug}                → holdings    (a fund's full constituent list)
+//   /us/products/{slug}                → holdings    (a fund's page; carries its entityId)
+//   /api/fund-holdings/{entityId}      → holdings    (the full constituent list, JSON)
 //
 // Both pages stream their data as React Server Component payloads inside inline
 // `self.__next_f.push([N,"…"])` script chunks. `extractNextF()` concatenates and unescapes those
 // chunk strings back into one payload string; the parsers then pull the embedded JSON out of it:
 //   • the products catalog is a set of `internalLink` product objects (ticker, title, category);
 //   • a fund's holdings are the `fundHoldingDetails` array (one object per constituent, with
-//     real values — securityName, securityTicker, shares, marketValueBase, wgt, figi).
+//     real values — securityName, securityTicker, shares, marketValueBase, wgt, figi). Until
+//     2026-11 the fund page embedded that array; it now ships `"fundHoldingDetails":"$undefined"`
+//     plus the fund's `entityId`, and the page's holdings modal lazy-loads the same objects from
+//     the keyless JSON route /api/fund-holdings/{entityId}. fetchHoldings handles both shapes.
 //
 // Every parser is defensive: a missing chunk / key / field degrades to an empty result or a null
 // cell rather than throwing. `resolveFund` returns null (not a throw) on an unknown ticker so the
@@ -291,7 +295,11 @@ function cleanTicker(v: unknown): string | null {
  * the top holdings without an ORDER BY. `wgt` is a fraction (0–1) → percent points (×100).
  */
 export function parseHoldings(payload: string, fundTicker: string | null): HoldingRow[] {
-  const items = jsonArrayForKey(payload, "fundHoldingDetails");
+  return holdingRows(jsonArrayForKey(payload, "fundHoldingDetails"), fundTicker);
+}
+
+/** Map raw fundHoldingDetails objects (embedded or from the JSON route) to weight-desc rows. */
+export function holdingRows(items: unknown[], fundTicker: string | null): HoldingRow[] {
   const rows: HoldingRow[] = [];
   for (const it of items) {
     if (it == null || typeof it !== "object") continue;
@@ -315,15 +323,41 @@ export function parseHoldings(payload: string, fundTicker: string | null): Holdi
   return rows;
 }
 
+/** The keyless JSON route the fund page's holdings modal loads its full constituent list from. */
+export function fundHoldingsApiUrl(entityId: string): string {
+  return `${WT_HOST}/api/fund-holdings/${encodeURIComponent(entityId)}`;
+}
+
+/** The fund's WisdomTree entity id (e.g. "1000521") from its decoded page payload, or null. */
+export function fundEntityId(payload: string): string | null {
+  return /"entityId":"(\d+)"/.exec(payload)?.[1] ?? null;
+}
+
+/** Parse the /api/fund-holdings JSON body (an array of fundHoldingDetails objects); [] if broken. */
+export function parseHoldingsJson(body: string, fundTicker: string | null): HoldingRow[] {
+  try {
+    const parsed = JSON.parse(body);
+    return Array.isArray(parsed) ? holdingRows(parsed, fundTicker) : [];
+  } catch {
+    return [];
+  }
+}
+
 /**
- * Detailed holdings for one fund (its current published constituent list — WisdomTree embeds only
- * current holdings, so there is no as-of/time-travel coordinate). Returns [] for a fund page with
- * no embedded holdings.
+ * Detailed holdings for one fund (its current published constituent list — WisdomTree publishes
+ * only current holdings, so there is no as-of/time-travel coordinate). Reads the array embedded in
+ * the fund page when present; otherwise (the current site) follows the page's entityId to the
+ * /api/fund-holdings JSON route. Returns [] for a fund with no holdings either way.
  */
 export async function fetchHoldings(
   get: (url: string) => Promise<string>,
   fund: ResolvedFund,
 ): Promise<HoldingRow[]> {
-  const html = await get(fundPageUrl(fund.slug));
-  return parseHoldings(extractNextF(html), fund.ticker.toUpperCase());
+  const fundTicker = fund.ticker.toUpperCase();
+  const payload = extractNextF(await get(fundPageUrl(fund.slug)));
+  const embedded = parseHoldings(payload, fundTicker);
+  if (embedded.length > 0) return embedded;
+  const entityId = fundEntityId(payload);
+  if (entityId == null) return [];
+  return parseHoldingsJson(await get(fundHoldingsApiUrl(entityId)), fundTicker);
 }

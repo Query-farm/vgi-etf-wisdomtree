@@ -21,3 +21,25 @@ tasks:
   - name: "dgrw_holdings_scan"
     check_sql: "SELECT count(*) > 0 FROM wisdomtree.main.holdings() WHERE fund_ticker = 'DGRW'"
     success_criteria: "The answer returns DGRW constituents via the holdings() backing scan function filtered by fund_ticker."
+
+  # Composed (products × holdings): the agent saves its answer in a temp table; the check_sql
+  # recomputes the live truth and compares, so a wrong answer fails.
+  - name: "domestic_equity_top_holdings"
+    check_sql: >-
+      WITH truth AS (
+        SELECT p.ticker AS fund_ticker, h.ticker
+        FROM wisdomtree.main.products p
+        JOIN wisdomtree.main.holdings h ON h.fund_ticker = p.ticker
+        WHERE p.asset_class = 'Domestic Equity'
+        QUALIFY row_number() OVER (PARTITION BY p.ticker ORDER BY h.weight_percent DESC NULLS LAST) = 1
+      )
+      SELECT (SELECT count(*) FROM truth) > 0
+      AND (SELECT count(*) FROM top_holdings) = (SELECT count(*) FROM truth)
+      AND NOT EXISTS (
+        SELECT 1 FROM truth t
+        LEFT JOIN top_holdings a
+          ON upper(trim(a.fund_ticker)) = t.fund_ticker
+          AND upper(trim(a.ticker)) = t.ticker
+        WHERE a.fund_ticker IS NULL
+      )
+    success_criteria: "The answer gives, for each Domestic Equity fund in the products table, its top holding by weight from the holdings table, saved in top_holdings."

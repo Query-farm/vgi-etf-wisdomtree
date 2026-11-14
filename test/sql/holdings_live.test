@@ -37,3 +37,25 @@ query I
 SELECT (count(*) > 50)::INT FROM wt.holdings() WHERE fund_ticker = 'DGRW';
 ----
 1
+
+# Non-partition predicates are pushed into the scan too and DuckDB drops them from its own plan,
+# so the scan must apply them (autoApplyFilters). Regression: before the fix, asset_group = 'EQ'
+# still returned DGRW's cash rows and ticker = 'NVDA' returned every row of every fund.
+query I
+SELECT (count(*) > 50 AND bool_and(asset_group = 'EQ'))::INT
+FROM wt.holdings WHERE fund_ticker = 'DGRW' AND asset_group = 'EQ';
+----
+1
+
+query I
+SELECT (count(*) = 1 AND bool_and(ticker = 'MSFT'))::INT
+FROM wt.holdings WHERE fund_ticker = 'DGRW' AND ticker = 'MSFT';
+----
+1
+
+# Holdings come from the /api/fund-holdings JSON route now that fund pages stopped embedding them:
+# a filtered fund must return its full constituent list (DGRW ~200), not the page's top-100 ranking.
+query I
+SELECT (count(*) > 150)::INT FROM wt.holdings WHERE fund_ticker = 'DGRW';
+----
+1
