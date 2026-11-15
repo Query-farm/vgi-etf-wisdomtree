@@ -119,13 +119,18 @@ const CATALOG_TAGS: Record<string, string> = {
     "asset-class classification, and to inspect what a fund currently holds. The central concept " +
     "is the fund, identified by its exchange ticker (e.g. DGRW); start from the catalog to find " +
     "that key, then drill into a specific fund's holdings. Data is WisdomTree's public fund " +
-    "pages: best-effort, for informational use.",
+    "pages: best-effort, for informational use." +
+    " Upstream source: https://www.wisdomtree.com/us/products.",
   "vgi.doc_md":
     "## WisdomTree ETFs\n\n" +
     "WisdomTree US ETF data, exposed as DuckDB tables.\n\n" +
     "The **fund** is the unit of the data and is keyed by an exchange `ticker` (e.g. `DGRW`) — " +
     "begin at the catalog to discover that key, then drill into a fund's holdings. Holdings are " +
     "the current published portfolio (WisdomTree does not publish historical holdings).\n\n" +
+    "### Sources\n\n" +
+    "- [WisdomTree US ETFs](https://www.wisdomtree.com/us/products) — the fund lineup the catalog is read from.\n" +
+    "- [WisdomTree terms of use](https://www.wisdomtree.com/us/terms) — terms that govern use of the site's data.\n" +
+    "\n" +
     "Data is provided for informational use; review WisdomTree's terms before redistribution.",
   "vgi.keywords": JSON.stringify([
     "ETF",
