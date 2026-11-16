@@ -33,7 +33,7 @@ Every [GitHub release](https://github.com/Query-farm/vgi-etf-wisdomtree/releases
 INSTALL vgi FROM community;
 LOAD vgi;
 
-ATTACH 'wisdomtree' AS wisdomtree (TYPE vgi, LOCATION 'github-auto://Query-farm/vgi-etf-wisdomtree@v0.4.2');
+ATTACH 'wisdomtree' AS wisdomtree (TYPE vgi, LOCATION 'github-auto://Query-farm/vgi-etf-wisdomtree@v0.4.3');
 
 -- The WisdomTree US ETF lineup
 SELECT ticker, fund_name, asset_class FROM wisdomtree.main.products ORDER BY ticker LIMIT 5;
@@ -42,7 +42,7 @@ SELECT ticker, fund_name, asset_class FROM wisdomtree.main.products ORDER BY tic
 SELECT name, ticker, weight_percent FROM wisdomtree.main.holdings WHERE fund_ticker = 'DGRW' ORDER BY weight_percent DESC LIMIT 5;
 ```
 
-Prebuilt binaries cover macOS (Apple silicon), Linux (x86-64 and arm64). `github-auto://` needs an explicit release tag; change `@v0.4.2` to move to a newer release.
+Prebuilt binaries cover macOS (Apple silicon), Linux (x86-64 and arm64). `github-auto://` needs an explicit release tag; change `@v0.4.3` to move to a newer release.
 
 ### Other ways to run it
 
