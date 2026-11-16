@@ -7,3 +7,4 @@ duckdb_unittest_tempdir/
 # vgi-lint --ai leaves these caches in the cwd
 .vgi-review-cache.json
 .vgi-sim-cache.json
+.tools/
