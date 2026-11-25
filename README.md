@@ -33,7 +33,7 @@ Every [GitHub release](https://github.com/Query-farm/vgi-etf-wisdomtree/releases
 INSTALL vgi FROM community;
 LOAD vgi;
 
-ATTACH 'wisdomtree' AS wisdomtree (TYPE vgi, LOCATION 'github-auto://Query-farm/vgi-etf-wisdomtree@v0.4.3');
+ATTACH 'wisdomtree' AS wisdomtree (TYPE vgi, LOCATION 'github-auto://Query-farm/vgi-etf-wisdomtree@v0.5.0');
 
 -- The WisdomTree US ETF lineup
 SELECT ticker, fund_name, asset_class FROM wisdomtree.main.products ORDER BY ticker LIMIT 5;
@@ -42,7 +42,7 @@ SELECT ticker, fund_name, asset_class FROM wisdomtree.main.products ORDER BY tic
 SELECT name, ticker, weight_percent FROM wisdomtree.main.holdings WHERE fund_ticker = 'DGRW' ORDER BY weight_percent DESC LIMIT 5;
 ```
 
-Prebuilt binaries cover macOS (Apple silicon), Linux (x86-64 and arm64). `github-auto://` needs an explicit release tag; change `@v0.4.3` to move to a newer release.
+Prebuilt binaries cover macOS (Apple silicon), Linux (x86-64 and arm64). `github-auto://` needs an explicit release tag; change `@v0.5.0` to move to a newer release.
 
 ### Other ways to run it
 
@@ -177,8 +177,8 @@ bun run typecheck   # own-source typecheck (see scripts/typecheck.sh)
 The E2E suite needs the haybarn runner and the vgi extension, once:
 
 ```bash
-uv tool install --prerelease allow 'haybarn-unittest>=2.0.0rc11,<2.1'   # haybarn 2.0 (vgi.v3)
-echo "FORCE INSTALL vgi FROM community;" | uvx --prerelease allow --from 'haybarn-cli>=2.0.0rc11,<2.1' haybarn-cli
+uv tool install --prerelease allow 'haybarn-unittest>=2.0.1rc3,<2.1'   # haybarn 2.0 (vgi.v3)
+echo "FORCE INSTALL vgi FROM community;" | uvx --prerelease allow --from 'haybarn-cli>=2.0.1rc3,<2.1' haybarn-cli
 ```
 
 Metadata quality is graded by [`vgi-lint`](https://github.com/Query-farm/vgi-lint-check);
